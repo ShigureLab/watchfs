@@ -1,0 +1,43 @@
+name: Unit Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+        architecture: ['x64']
+    name: unittest - Python ${{ matrix.python-version }} on ${{ matrix.architecture }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Install python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
+          cache: 'poetry'
+
+      - name: Install just
+        uses: extractions/setup-just@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          just ci-install
+
+      - name: unit test
+        run: |
+          just ci-test
