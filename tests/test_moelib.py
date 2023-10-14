@@ -1,9 +1,7 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
-
-# This can be replaced with tomllib if you are using Python 3.11+
-import tomli as tomllib
 
 from watchfs import __version__
 
