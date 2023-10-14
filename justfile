@@ -1,4 +1,4 @@
-VERSION := `poetry run python -c "import sys; from moelib import __version__ as version; sys.stdout.write(version)"`
+VERSION := `poetry run python -c "import sys; from watchfs import __version__ as version; sys.stdout.write(version)"`
 
 install:
   poetry install
@@ -12,14 +12,14 @@ fmt:
   poetry run black .
 
 lint:
-  poetry run pyright moelib tests
+  poetry run pyright watchfs tests
   poetry run ruff .
 
 fmt-docs:
   prettier --write '**/*.md'
 
 build:
-  touch moelib/py.typed
+  touch watchfs/py.typed
   poetry build
 
 release:
@@ -29,7 +29,7 @@ release:
   git push --tags
 
 publish:
-  touch moelib/py.typed
+  touch watchfs/py.typed
   poetry publish --build
   git tag "v{{VERSION}}"
   git push --tags

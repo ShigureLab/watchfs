@@ -5,7 +5,7 @@ from pathlib import Path
 # This can be replaced with tomllib if you are using Python 3.11+
 import tomli as tomllib
 
-from moelib import __version__
+from watchfs import __version__
 
 with Path("pyproject.toml").open("rb") as f:
     project_info = tomllib.load(f)
