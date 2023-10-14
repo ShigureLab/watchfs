@@ -8,7 +8,6 @@ test:
   just clean
 
 fmt:
-  poetry run isort .
   poetry run black .
 
 lint:
@@ -50,7 +49,6 @@ ci-install:
   poetry install --no-interaction --no-root
 
 ci-fmt-check:
-  poetry run isort --check-only .
   poetry run black --check --diff .
   prettier --check '**/*.md'
 

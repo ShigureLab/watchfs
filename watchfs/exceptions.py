@@ -29,7 +29,6 @@ class ParseError(WatchFsBaseException):
     code = ErrorCode.PARSE_ERROR
 
 
-
 def handleUncaughtException(exctype: type[Exception], exception: Exception, trace: TracebackType):
     oldHook(exctype, exception, trace)
     if isinstance(exception, WatchFsBaseException):
@@ -37,4 +36,3 @@ def handleUncaughtException(exctype: type[Exception], exception: Exception, trac
 
 
 sys.excepthook, oldHook = handleUncaughtException, sys.excepthook
-

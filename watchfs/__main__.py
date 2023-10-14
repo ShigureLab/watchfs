@@ -10,7 +10,7 @@ from watchfiles import Change, awatch  # type: ignore
 from watchfs import __version__
 from watchfs.as_sync import as_sync
 from watchfs.exceptions import ParseError
-from watchfs.rusty import Err, Ok, Option, Result, Some
+from watchfs.rusty import Err, Ok, Result
 
 copyfile = wrap(shutil.copyfile)
 
