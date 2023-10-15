@@ -25,16 +25,12 @@ aiofiles = "^23.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
-black = "^23.1"
 pyright = "^1.1.293"
 pytest-rerunfailures = "^11.1"
 ruff = "^0.0.292"
 
 [tool.poetry.scripts]
 watchfs = "watchfs.__main__:main"
-
-[tool.black]
-line-length = 120
 
 [tool.pyright]
 include = ["watchfs", "tests"]

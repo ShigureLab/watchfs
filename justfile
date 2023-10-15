@@ -8,7 +8,7 @@ test:
   just clean
 
 fmt:
-  poetry run black .
+  poetry run ruff format .
 
 lint:
   poetry run pyright watchfs tests
@@ -49,7 +49,7 @@ ci-install:
   poetry install --no-interaction --no-root
 
 ci-fmt-check:
-  poetry run black --check --diff .
+  poetry run ruff format --check .
   prettier --check '**/*.md'
 
 ci-lint:
