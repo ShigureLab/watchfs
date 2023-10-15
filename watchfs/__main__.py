@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import shutil
 from pathlib import Path
 
@@ -41,14 +42,13 @@ async def handle_removed(src_dir: Path, dst_dir: Path, changed: Path):
         dst.unlink()
 
 
-@as_sync
 async def sync(src_dir: str, dst_dir: str):
     src = Path(src_dir).absolute()
     dst = Path(dst_dir).absolute()
     async for changes in awatch(src):
         for change, path in changes:
             path = Path(path).absolute()
-            print(f"{change.name}: {path}")
+            print(f"[{change.name}] {path}")
             match change:
                 case Change.added:
                     await handle_added(src, dst, path)
@@ -66,17 +66,25 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str], ParseError]
     return Ok((src_dir, dst_dir))
 
 
-def main():
+@as_sync
+async def main():
     parser = argparse.ArgumentParser(prog="watchfs", description="Watch and sync files.")
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument("sync_mapping", metavar="SRC_DIR:DST_DIR", type=str, nargs="+", help="Sync mapping file.")
     args = parser.parse_args()
+    parsed_sync_mapping: list[tuple[str, str]] = []
     for sync_src_with_dst in args.sync_mapping:
         match parse_sync_mapping(sync_src_with_dst):
             case Ok((src_dir, dst_dir)):
-                sync(src_dir, dst_dir)  # TODO: support sync multiple dir
+                parsed_sync_mapping.append((src_dir, dst_dir))
             case Err(err):
                 raise err
+    print(f"Starting watch {', '.join(map(lambda src_dst: f"{src_dst[0]} -> {src_dst[1]}", parsed_sync_mapping))}")
+    print("Press Ctrl+C to exit.")
+    try:
+        await asyncio.gather(*[sync(src_dir, dst_dir) for src_dir, dst_dir in parsed_sync_mapping])
+    except asyncio.exceptions.CancelledError:
+        print("Bye!")
 
 
 if __name__ == "__main__":

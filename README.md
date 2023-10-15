@@ -15,10 +15,12 @@ Watch and sync files to another directory.
 
 ## Installation
 
-TODO
+```python
+pipx install .
+```
 
 ## Usage
 
 ```python
-watchfs src:dst
+watchfs src1:dst1 src2:dst2
 ```
