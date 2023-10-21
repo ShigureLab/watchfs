@@ -6,12 +6,23 @@ import shutil
 from pathlib import Path
 
 from aiofiles.os import wrap
+from colored import Back, Fore  # type: ignore
 from watchfiles import Change, awatch  # type: ignore
 
 from watchfs import __version__
 from watchfs.as_sync import as_sync
+from watchfs.colorful import Badge
 from watchfs.exceptions import ParseError
 from watchfs.rusty import Err, Ok, Result
+
+BADGE_ADD = Badge("ADDED", Fore.black, Back.green)
+BADGE_DEL = Badge("DELETED", Fore.black, Back.red)
+BADGE_MOD = Badge("MODIFIED", Fore.black, Back.blue)
+CHANGE_TYPE_TO_BADGE = {
+    Change.added: BADGE_ADD,
+    Change.deleted: BADGE_DEL,
+    Change.modified: BADGE_MOD,
+}
 
 copyfile = wrap(shutil.copyfile)
 
@@ -48,7 +59,7 @@ async def sync(src_dir: str, dst_dir: str):
     async for changes in awatch(src):
         for change, path in changes:
             path = Path(path).absolute()
-            print(f"[{change.name}] {path}")
+            print(f"{CHANGE_TYPE_TO_BADGE[change]} {path}")
             match change:
                 case Change.added:
                     await handle_added(src, dst, path)

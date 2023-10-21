@@ -43,6 +43,17 @@ files = [
 ]
 
 [[package]]
+name = "colored"
+version = "2.2.3"
+description = "Simple python library for color and formatting to terminal"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "colored-2.2.3-py3-none-any.whl", hash = "sha256:1318b2fb8e0313d39724b8ab0707af79d1e2c0e60710b608a00e70fe0f84ff5d"},
+    {file = "colored-2.2.3.tar.gz", hash = "sha256:1905ae45fa2b7fd63a8b4776586e63aeaba4df8db225b72b78fd167408558983"},
+]
+
+[[package]]
 name = "idna"
 version = "3.4"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -311,4 +322,4 @@ anyio = ">=3.0.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "df3c78935668f2d4a3374fc65e0b12621d003519f7f3072fa6e467d0abce492a"
+content-hash = "cf565a09a59ecaf2e47d5ca7ab090b6033bd9a344b48021b808bcc66e8a9af0b"

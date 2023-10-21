@@ -22,6 +22,7 @@ python = "^3.12"
 watchfiles = "^0.21.0"
 typing-extensions = "^4.8.0"
 aiofiles = "^23.2.1"
+colored = "^2.2.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
@@ -40,6 +41,8 @@ typeCheckingMode = "strict"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+
+[tool.ruff.lint]
 select = [
   # Pyflakes
   "F",
@@ -47,7 +50,7 @@ select = [
   "E",
   "W",
   # Isort
-  "I001",
+  "I",
   # Pyupgrade
   "UP",
   # Flake8-pyi
