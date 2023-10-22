@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "watchfs"
-version = "0.1.3"
+version = "0.1.0"
 description = ""
 authors = ["Nyakku Shigure <sigure.qaq@gmail.com>"]
 license = "MIT"
