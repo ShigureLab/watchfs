@@ -47,7 +47,8 @@ async def handle_removed(src_dir: Path, dst_dir: Path, changed: Path):
     dst = dst_dir / changed_rel_to_src
     if dst.is_dir():
         for child in dst.iterdir():
-            await handle_removed(src_dir, dst_dir, child)
+            child_rel_to_dst = child.relative_to(dst_dir)
+            await handle_removed(src_dir, dst_dir, src_dir / child_rel_to_dst)
         dst.rmdir()
     elif dst.is_file():
         dst.unlink()
