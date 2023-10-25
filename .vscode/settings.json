@@ -5,6 +5,5 @@
   "python.analysis.inlayHints.variableTypes": true,
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
-  },
-  "ruff.enableExperimentalFormatter": true
+  }
 }
