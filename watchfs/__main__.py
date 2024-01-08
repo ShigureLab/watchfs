@@ -75,6 +75,13 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str], ParseError]
     if len(splited_sync_mapping) != 2:
         return Err(ParseError("Invalid sync mapping."))
     src_dir, dst_dir = sync_mapping.split(":")
+
+    # check if src_dir is a subdirectory of dst_dir
+    abs_src_dir = Path(src_dir).resolve()
+    abs_dst_dir = Path(dst_dir).resolve()
+    if abs_src_dir in abs_dst_dir.parents:
+        return Err(ParseError(f"src_dir({abs_src_dir}) is a subdirectory of dst_dir({abs_dst_dir})."))
+
     return Ok((src_dir, dst_dir))
 
 
