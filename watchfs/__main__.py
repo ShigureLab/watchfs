@@ -77,10 +77,10 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str], ParseError]
     src_dir, dst_dir = sync_mapping.split(":")
 
     # check if src_dir is a subdirectory of dst_dir
-    abs_src_dir = Path(src_dir)
-    abs_dst_dir = Path(dst_dir)
-    if abs_src_dir in abs_dst_dir.parents:
-        return Err(ParseError(f"src_dir is a subdirectory of dst_dir {abs_src_dir.absolute()}:{abs_dst_dir.absolute()}."))
+    src_dir_ = Path(src_dir)
+    dst_dir_ = Path(dst_dir)
+    if src_dir_ in dst_dir_.parents:
+        return Err(ParseError(f"src_dir is a subdirectory of dst_dir {src_dir_.absolute()}:{dst_dir_.absolute()}."))
 
     return Ok((src_dir, dst_dir))
 
