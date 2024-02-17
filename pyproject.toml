@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "watchfs"
 version = "0.1.0"
-description = ""
+description = "Watch and sync files to another directory"
 authors = ["Nyakku Shigure <sigure.qaq@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/ShigureLab/watchfs"
 repository = "https://github.com/ShigureLab/watchfs"
-keywords = []
+keywords = ["watch", "sync"]
 classifiers = [
   "Operating System :: OS Independent",
   "License :: OSI Approved :: MIT License",
