@@ -28,7 +28,7 @@ colored = "^2.2.3"
 pytest = "^8.0.0"
 pyright = "^1.1.333"
 pytest-rerunfailures = "^12.0"
-ruff = "^0.3.0"
+ruff = "^0.4.0"
 
 [tool.poetry.scripts]
 watchfs = "watchfs.__main__:main"
