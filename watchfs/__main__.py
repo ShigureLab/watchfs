@@ -8,11 +8,13 @@ from pathlib import Path
 from aiofiles.os import wrap
 from colored import Back, Fore  # type: ignore
 from watchfiles import Change, awatch  # type: ignore
+from watchfiles.filters import BaseFilter
 
 from watchfs import __version__
 from watchfs.as_sync import as_sync
 from watchfs.colorful import Badge
 from watchfs.exceptions import ParseError
+from watchfs.filters import ExcludeFilter, combine_filters
 from watchfs.rusty import Err, Ok, Result
 
 BADGE_ADD = Badge("ADDED", Fore.black, Back.green)
@@ -54,10 +56,10 @@ async def handle_removed(src_dir: Path, dst_dir: Path, changed: Path):
         dst.unlink()
 
 
-async def sync(src_dir: str, dst_dir: str):
+async def sync(src_dir: str, dst_dir: str, filter: BaseFilter):
     src = Path(src_dir).absolute()
     dst = Path(dst_dir).absolute()
-    async for changes in awatch(src):
+    async for changes in awatch(src, watch_filter=filter):
         for change, path in changes:
             path = Path(path).absolute()
             print(f"{CHANGE_TYPE_TO_BADGE[change]} {path}")
@@ -90,6 +92,7 @@ async def main():
     parser = argparse.ArgumentParser(prog="watchfs", description="Watch and sync files.")
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument("sync_mapping", metavar="SRC_DIR:DST_DIR", type=str, nargs="+", help="Sync mapping file.")
+    parser.add_argument("--exclude", type=str, help="Exclude directories or files, separated by comma.")
     args = parser.parse_args()
     parsed_sync_mapping: list[tuple[str, str]] = []
     for sync_src_with_dst in args.sync_mapping:
@@ -98,10 +101,15 @@ async def main():
                 parsed_sync_mapping.append((src_dir, dst_dir))
             case Err(err):
                 raise err
+    filters: list[BaseFilter] = []
+    if args.exclude:
+        filters.append(ExcludeFilter(args.exclude))
+
+    combined_filter = combine_filters(filters)
     print(f"Starting watch {', '.join(map(lambda src_dst: f"{src_dst[0]} -> {src_dst[1]}", parsed_sync_mapping))}")
     print("Press Ctrl+C to exit.")
     try:
-        await asyncio.gather(*[sync(src_dir, dst_dir) for src_dir, dst_dir in parsed_sync_mapping])
+        await asyncio.gather(*[sync(src_dir, dst_dir, combined_filter) for src_dir, dst_dir in parsed_sync_mapping])
     except asyncio.exceptions.CancelledError:
         print("Bye!")
 
