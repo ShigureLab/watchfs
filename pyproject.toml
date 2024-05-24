@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "watchfs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Watch and sync files to another directory"
 authors = ["Nyakku Shigure <sigure.qaq@gmail.com>"]
 license = "MIT"
