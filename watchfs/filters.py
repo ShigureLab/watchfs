@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import time
 from pathlib import Path
 
 from watchfiles import Change
@@ -29,6 +31,43 @@ class ExcludeFilter(DefaultFilter):
             else:
                 ignore_paths.append(arg)
         return ignore_dirs, ignore_entity_patterns, ignore_paths
+
+
+class ChangeCacheFilter(BaseFilter):
+    CACHE_MAX_ALIVE_TIME = 1
+
+    def __init__(self):
+        self.cache: dict[str, tuple[float, str]] = {}
+
+    def __call__(self, change: Change, path: str) -> bool:
+        match change:
+            case Change.added | Change.modified:
+                return not self.lookup_cache(path)
+            case Change.deleted:
+                return True
+
+    def clean_dead_cache(self) -> None:
+        to_delete: list[str] = []
+        for path, (timestamp, _) in self.cache.items():
+            if time.time() - timestamp > self.CACHE_MAX_ALIVE_TIME:
+                to_delete.append(path)
+        for path in to_delete:
+            del self.cache[path]
+
+    def lookup_cache(self, path: str) -> bool:
+        self.clean_dead_cache()
+        if path not in self.cache:
+            self.cache[path] = (time.time(), self.calc_file_md5(path))
+            return False
+        _, md5 = self.cache[path]
+        if md5 != self.calc_file_md5(path):
+            self.cache[path] = (time.time(), self.calc_file_md5(path))
+            return False
+        return True
+
+    def calc_file_md5(self, path: str) -> str:
+        with Path(path).open("rb") as f:
+            return hashlib.md5(f.read()).hexdigest()
 
 
 class CombinedFilter(BaseFilter):

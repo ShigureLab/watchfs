@@ -14,7 +14,7 @@ from watchfs import __version__
 from watchfs.as_sync import as_sync
 from watchfs.colorful import Badge
 from watchfs.exceptions import ParseError
-from watchfs.filters import ExcludeFilter, combine_filters
+from watchfs.filters import ChangeCacheFilter, ExcludeFilter, combine_filters
 from watchfs.rusty import Err, Ok, Result
 
 BADGE_ADD = Badge("ADDED", Fore.black, Back.green)
@@ -72,11 +72,19 @@ async def sync(src_dir: str, dst_dir: str, filter: BaseFilter):
                     await handle_removed(src, dst, path)
 
 
-def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str], ParseError]:
-    splited_sync_mapping = sync_mapping.split(":")
+def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str, bool], ParseError]:
+    splited_sync_mapping: list[str] = sync_mapping.split(":")
+    bidirectional: bool = False
+    if ":" in sync_mapping:
+        splited_sync_mapping = sync_mapping.split(":")
+    elif "<->" in sync_mapping:
+        splited_sync_mapping = sync_mapping.split("<->")
+        bidirectional = True
+    elif "->" in sync_mapping:
+        splited_sync_mapping = sync_mapping.split("->")
     if len(splited_sync_mapping) != 2:
         return Err(ParseError("Invalid sync mapping."))
-    src_dir, dst_dir = sync_mapping.split(":")
+    src_dir, dst_dir = splited_sync_mapping
 
     # check if src_dir is a subdirectory of dst_dir
     abs_src_dir = Path(src_dir).resolve()
@@ -84,7 +92,7 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str], ParseError]
     if abs_src_dir in abs_dst_dir.parents:
         return Err(ParseError(f"src_dir({abs_src_dir}) is a subdirectory of dst_dir({abs_dst_dir})."))
 
-    return Ok((src_dir, dst_dir))
+    return Ok((src_dir, dst_dir, bidirectional))
 
 
 @as_sync
@@ -93,17 +101,22 @@ async def main():
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument("sync_mapping", metavar="SRC_DIR:DST_DIR", type=str, nargs="+", help="Sync mapping file.")
     parser.add_argument("--exclude", type=str, help="Exclude directories or files, separated by comma.")
+    parser.add_argument("-cc", "--enable-content-caching", action="store_true", help="Enable content caching.")
     args = parser.parse_args()
     parsed_sync_mapping: list[tuple[str, str]] = []
     for sync_src_with_dst in args.sync_mapping:
         match parse_sync_mapping(sync_src_with_dst):
-            case Ok((src_dir, dst_dir)):
+            case Ok((src_dir, dst_dir, bidirectional)):
                 parsed_sync_mapping.append((src_dir, dst_dir))
+                if bidirectional:
+                    parsed_sync_mapping.append((dst_dir, src_dir))
             case Err(err):
                 raise err
     filters: list[BaseFilter] = []
     if args.exclude:
         filters.append(ExcludeFilter(args.exclude))
+    if args.enable_content_caching:
+        filters.append(ChangeCacheFilter())
 
     combined_filter = combine_filters(filters)
     print(f"Starting watch {', '.join(map(lambda src_dst: f"{src_dst[0]} -> {src_dst[1]}", parsed_sync_mapping))}")
