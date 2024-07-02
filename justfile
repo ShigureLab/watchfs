@@ -12,7 +12,7 @@ fmt:
 
 lint:
   poetry run pyright watchfs tests
-  poetry run ruff .
+  poetry run ruff check .
 
 fmt-docs:
   prettier --write '**/*.md'
