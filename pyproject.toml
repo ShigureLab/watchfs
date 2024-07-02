@@ -21,7 +21,7 @@ classifiers = [
 python = "^3.12"
 watchfiles = "^0.22.0"
 typing-extensions = "^4.8.0"
-aiofiles = "^23.2.1"
+aiofiles = "^24.0.0"
 colored = "^2.2.3"
 
 [tool.poetry.group.dev.dependencies]
