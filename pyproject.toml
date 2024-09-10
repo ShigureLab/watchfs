@@ -1,6 +1,6 @@
 [project]
 name = "watchfs"
-version = "0.1.1"
+version = "0.1.2"
 description = "Watch and sync files to another directory"
 readme = "README.md"
 requires-python = ">=3.12"
