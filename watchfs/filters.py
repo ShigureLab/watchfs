@@ -5,38 +5,37 @@ import time
 from pathlib import Path
 
 from watchfiles import Change
-from watchfiles.filters import BaseFilter, DefaultFilter
+from watchfiles.filters import BaseFilter
 
 
-class ExcludeFilter(DefaultFilter):
+def match_pattern(path: Path, pattern: Path) -> bool:
+    if pattern.is_dir():
+        return pattern in path.parents
+    return path.match(str(pattern))
+
+
+class ExcludeFilter(BaseFilter):
     def __init__(self, cli_arg: str):
-        ignore_dirs, ignore_entity_patterns, ignore_paths = self.parse_cli_arg(cli_arg)
-        super().__init__(
-            ignore_dirs=ignore_dirs,
-            ignore_entity_patterns=ignore_entity_patterns,
-            ignore_paths=ignore_paths,
-        )
+        super().__init__()
+        self.exclude_patterns = self.parse_cli_arg(cli_arg)
+
+    def __call__(self, change: Change, path: str) -> bool:
+        return all(not match_pattern(Path(path), pattern) for pattern in self.exclude_patterns)
 
     @staticmethod
-    def parse_cli_arg(cli_arg: str) -> tuple[list[str], list[str], list[str]]:
-        ignore_dirs: list[str] = []
-        ignore_entity_patterns: list[str] = []
-        ignore_paths: list[str] = []
+    def parse_cli_arg(cli_arg: str) -> list[Path]:
+        exclude_patterns: list[Path] = []
         for arg in cli_arg.split(","):
-            arg = str(Path(arg).absolute())
-            if "*" in arg:
-                ignore_entity_patterns.append(arg)
-            elif Path(arg).is_dir():
-                ignore_dirs.append(arg)
-            else:
-                ignore_paths.append(arg)
-        return ignore_dirs, ignore_entity_patterns, ignore_paths
+            path_patterns = Path(arg).absolute()
+            exclude_patterns.append(path_patterns)
+        return exclude_patterns
 
 
 class ChangeCacheFilter(BaseFilter):
     CACHE_MAX_ALIVE_TIME = 1
 
     def __init__(self):
+        super().__init__()
         self.cache: dict[str, tuple[float, str]] = {}
 
     def __call__(self, change: Change, path: str) -> bool:

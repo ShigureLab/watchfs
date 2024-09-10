@@ -16,7 +16,7 @@ Watch and sync files to another directory.
 ## Installation
 
 ```python
-pipx install watchfs
+uv tool install watchfs
 ```
 
 ## Usage
