@@ -4,11 +4,11 @@ import argparse
 import asyncio
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiofiles.os import wrap
 from colored import Back, Fore  # type: ignore
 from watchfiles import Change, awatch  # type: ignore
-from watchfiles.filters import BaseFilter
 
 from watchfs import __version__
 from watchfs.as_sync import as_sync
@@ -16,6 +16,9 @@ from watchfs.colorful import Badge
 from watchfs.exceptions import ParseError
 from watchfs.filters import ChangeCacheFilter, ExcludeFilter, combine_filters
 from watchfs.rusty import Err, Ok, Result
+
+if TYPE_CHECKING:
+    from watchfiles.filters import BaseFilter
 
 BADGE_ADD = Badge("ADDED", Fore.black, Back.green)
 BADGE_DEL = Badge("DELETED", Fore.black, Back.red)
@@ -119,7 +122,7 @@ async def main():
         filters.append(ChangeCacheFilter())
 
     combined_filter = combine_filters(filters)
-    print(f"Starting watch {', '.join(map(lambda src_dst: f"{src_dst[0]} -> {src_dst[1]}", parsed_sync_mapping))}")
+    print(f"Starting watch {', '.join(f"{src_dst[0]} -> {src_dst[1]}" for src_dst in parsed_sync_mapping)}")
     print("Press Ctrl+C to exit.")
     try:
         await asyncio.gather(*[sync(src_dir, dst_dir, combined_filter) for src_dir, dst_dir in parsed_sync_mapping])

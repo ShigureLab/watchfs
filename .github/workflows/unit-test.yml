@@ -12,22 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ['3.12', '3.13-dev']
         architecture: ['x64']
     name: unittest - Python ${{ matrix.python-version }} on ${{ matrix.architecture }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pipx install poetry
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
 
       - name: Install python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.architecture }}
-          cache: 'poetry'
 
       - name: Install just
         uses: extractions/setup-just@v2
