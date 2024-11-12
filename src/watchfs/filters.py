@@ -10,7 +10,7 @@ from watchfiles.filters import BaseFilter
 
 def match_pattern(path: Path, pattern: Path) -> bool:
     if pattern.is_dir():
-        return pattern in path.parents
+        return pattern in [path, *path.parents]
     return path.match(str(pattern))
 
 
