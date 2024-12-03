@@ -20,7 +20,7 @@ dependencies = [
   "aiofiles>=24.1.0",
   "colored>=2.2.4",
   "typing-extensions>=4.12.2",
-  "watchfiles>=0.24.0",
+  "watchfiles>=1.0.0",
 ]
 
 [project.urls]
@@ -34,11 +34,11 @@ watchfs = "watchfs.__main__:main"
 
 [dependency-groups]
 dev = [
-  "pyright>=1.1.386",
-  "ruff>=0.7.1",
-  "pytest>=8.3.3",
-  "pytest-rerunfailures>=14.0",
-  "tomli>=2.0.2",
+  "pyright>=1.1.389",
+  "ruff>=0.8.1",
+  "pytest>=8.3.4",
+  "pytest-rerunfailures>=15.0",
+  "tomli>=2.2.1",
 ]
 
 [tool.pyright]
