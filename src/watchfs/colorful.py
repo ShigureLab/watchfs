@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from colored import Back, Fore, Style  # type: ignore
+from colored import Back, Fore, Style
 
 
 class Badge:

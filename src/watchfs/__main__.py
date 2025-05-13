@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiofiles.os import wrap
-from colored import Back, Fore  # type: ignore
+from colored import Back, Fore
 from watchfiles import Change, awatch  # type: ignore
 
 from watchfs import __version__
@@ -122,7 +122,7 @@ async def main():
         filters.append(ChangeCacheFilter())
 
     combined_filter = combine_filters(filters)
-    print(f"Starting watch {', '.join(f"{src_dst[0]} -> {src_dst[1]}" for src_dst in parsed_sync_mapping)}")
+    print(f"Starting watch {', '.join(f'{src_dst[0]} -> {src_dst[1]}' for src_dst in parsed_sync_mapping)}")
     print("Press Ctrl+C to exit.")
     try:
         await asyncio.gather(*[sync(src_dir, dst_dir, combined_filter) for src_dir, dst_dir in parsed_sync_mapping])
