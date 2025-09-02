@@ -1,6 +1,6 @@
 # WatchFS
 
-Watch and sync files to another directory.
+Watch Files and Sync them to another directory
 
 <p align="center">
    <a href="https://python.org/" target="_blank"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/watchfs?logo=python&style=flat-square"></a>
