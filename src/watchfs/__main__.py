@@ -20,9 +20,9 @@ from watchfs.rusty import Err, Ok, Result
 if TYPE_CHECKING:
     from watchfiles.filters import BaseFilter
 
-BADGE_ADD = Badge("ADDED", Fore.black, Back.green)
-BADGE_DEL = Badge("DELETED", Fore.black, Back.red)
-BADGE_MOD = Badge("MODIFIED", Fore.black, Back.blue)
+BADGE_ADD = Badge("ADDED", Fore.black, Back.green)  # type: ignore
+BADGE_DEL = Badge("DELETED", Fore.black, Back.red)  # type: ignore
+BADGE_MOD = Badge("MODIFIED", Fore.black, Back.blue)  # type: ignore
 CHANGE_TYPE_TO_BADGE = {
     Change.added: BADGE_ADD,
     Change.deleted: BADGE_DEL,
