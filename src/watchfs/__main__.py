@@ -59,10 +59,10 @@ async def handle_removed(src_dir: Path, dst_dir: Path, changed: Path):
         dst.unlink()
 
 
-async def sync(src_dir: str, dst_dir: str, filter: BaseFilter):
+async def sync(src_dir: str, dst_dir: str, filter: BaseFilter, *, force_polling: bool = False):
     src = Path(src_dir).absolute()
     dst = Path(dst_dir).absolute()
-    async for changes in awatch(src, watch_filter=filter):
+    async for changes in awatch(src, watch_filter=filter, force_polling=force_polling):
         for change, path in changes:
             path = Path(path).absolute()
             print(f"{CHANGE_TYPE_TO_BADGE[change]} {path}")
@@ -105,6 +105,7 @@ async def main():
     parser.add_argument("sync_mapping", metavar="SRC_DIR:DST_DIR", type=str, nargs="+", help="Sync mapping file.")
     parser.add_argument("--exclude", type=str, help="Exclude directories or files, separated by comma.")
     parser.add_argument("-cc", "--enable-content-caching", action="store_true", help="Enable content caching.")
+    parser.add_argument("--force-polling", action="store_true", help="Enable force polling.")
     args = parser.parse_args()
     parsed_sync_mapping: list[tuple[str, str]] = []
     for sync_src_with_dst in args.sync_mapping:
@@ -125,7 +126,12 @@ async def main():
     print(f"Starting watch {', '.join(f'{src_dst[0]} -> {src_dst[1]}' for src_dst in parsed_sync_mapping)}")
     print("Press Ctrl+C to exit.")
     try:
-        await asyncio.gather(*[sync(src_dir, dst_dir, combined_filter) for src_dir, dst_dir in parsed_sync_mapping])
+        await asyncio.gather(
+            *[
+                sync(src_dir, dst_dir, combined_filter, force_polling=args.force_polling)
+                for src_dir, dst_dir in parsed_sync_mapping
+            ]
+        )
     except asyncio.exceptions.CancelledError:
         print("Bye!")
 
