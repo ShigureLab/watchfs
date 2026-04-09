@@ -30,7 +30,7 @@ watchfs src1:dst1 src2:dst2
 Use `SRC->DST` when the destination is a remote SSH directory:
 
 ```python
-watchfs ./src->nyakku@192.168.88.1:/tmp/watchfs-demo
+watchfs ./src->meow@192.168.66.1:/tmp/watchfs-demo
 ```
 
 Notes:
