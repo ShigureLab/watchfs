@@ -53,10 +53,7 @@ class ExcludeFilter(BaseFilter):
             stripped_arg = arg.strip()
             if not stripped_arg:
                 continue
-            if stripped_arg.startswith(("~", "/")):
-                exclude_patterns.append(Path(stripped_arg).expanduser().as_posix())
-            else:
-                exclude_patterns.append(Path(stripped_arg).as_posix())
+            exclude_patterns.append(Path(stripped_arg).expanduser().as_posix())
         return exclude_patterns
 
 
