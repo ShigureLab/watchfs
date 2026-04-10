@@ -5,7 +5,7 @@ from pathlib import Path, PurePosixPath
 
 from watchfs import __version__
 from watchfs.__main__ import build_queue_key
-from watchfs.mappings import LocalTargetSpec, SshTargetSpec, parse_sync_mapping
+from watchfs.mappings import LocalTargetSpec, SshTargetSpec, parse_sync_mapping, parse_target_spec
 from watchfs.rusty import Err, Ok
 
 with Path("pyproject.toml").open("rb") as f:
@@ -34,6 +34,34 @@ def test_parse_local_mapping_with_legacy_colon():
             assert bidirectional is False
         case _:
             raise AssertionError("expected local legacy mapping to parse")
+
+
+def test_parse_windows_drive_paths_as_local_targets():
+    match parse_target_spec("C:/src"):
+        case Ok(LocalTargetSpec(path)):
+            assert path == Path("C:/src")
+        case _:
+            raise AssertionError("expected Windows drive path to parse as local")
+
+
+def test_parse_windows_local_mapping_with_arrow():
+    match parse_sync_mapping("C:/src->D:/dst"):
+        case Ok((mapping, bidirectional)):
+            assert mapping.source == Path("C:/src")
+            assert mapping.target == LocalTargetSpec(Path("D:/dst"))
+            assert bidirectional is False
+        case _:
+            raise AssertionError("expected Windows arrow mapping to parse")
+
+
+def test_parse_windows_local_mapping_with_legacy_colon():
+    match parse_sync_mapping("C:/src:D:/dst"):
+        case Ok((mapping, bidirectional)):
+            assert mapping.source == Path("C:/src")
+            assert mapping.target == LocalTargetSpec(Path("D:/dst"))
+            assert bidirectional is False
+        case _:
+            raise AssertionError("expected Windows legacy mapping to parse")
 
 
 def test_parse_ssh_target_mapping():
@@ -91,6 +119,15 @@ def test_reject_bidirectional_remote_mapping():
             assert "Bidirectional sync is not supported" in err.message
         case _:
             raise AssertionError("expected bidirectional ssh mapping to be rejected")
+
+
+def test_reject_local_destination_nested_under_source_message():
+    match parse_sync_mapping("src:src/nested"):
+        case Err(err):
+            assert "dst_dir(" in err.message
+            assert "is a subdirectory of src_dir(" in err.message
+        case _:
+            raise AssertionError("expected nested local destination to be rejected")
 
 
 def test_reject_ambiguous_remote_mapping_without_arrow():

@@ -15,13 +15,13 @@ Watch Files and Sync them to another directory
 
 ## Installation
 
-```python
+```bash
 uv tool install watchfs
 ```
 
 ## Usage
 
-```python
+```bash
 watchfs src1:dst1 src2:dst2
 ```
 
@@ -29,7 +29,7 @@ watchfs src1:dst1 src2:dst2
 
 Use `SRC->DST` when the destination is a remote SSH directory:
 
-```python
+```bash
 watchfs ./src->meow@192.168.66.1:/tmp/watchfs-demo
 ```
 

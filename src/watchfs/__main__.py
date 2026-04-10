@@ -69,6 +69,8 @@ async def consume_target_queue(queue: asyncio.Queue[SyncEvent]) -> None:
         try:
             try:
                 await apply_event(event)
+            except asyncio.CancelledError:
+                raise
             except Exception as err:
                 print(f"Failed to sync {event.path} to {event.job.target.description}: {err}", file=sys.stderr)
         finally:

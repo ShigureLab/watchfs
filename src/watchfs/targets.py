@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import shlex
 import shutil
 import subprocess
@@ -50,7 +51,7 @@ class LocalTarget:
         if dst.is_dir():
             await _remove_directory(dst)
         elif dst.exists():
-            dst.unlink()
+            await asyncio.to_thread(dst.unlink)
 
 
 @dataclass(slots=True)
@@ -118,8 +119,6 @@ def create_target(spec: TargetSpec) -> SyncTarget:
 
 
 async def _remove_directory(path: Path) -> None:
-    import asyncio
-
     await asyncio.to_thread(shutil.rmtree, path)
 
 
@@ -128,8 +127,6 @@ async def _run_command(
     *,
     stdin: IO[bytes] | int | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    import asyncio
-
     return await asyncio.to_thread(
         subprocess.run,
         command,

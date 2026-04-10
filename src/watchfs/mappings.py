@@ -9,6 +9,8 @@ from watchfs.exceptions import ParseError
 from watchfs.rusty import Err, Ok, Result
 
 _SSH_TARGET_RE = re.compile(r"^(?:(?P<username>[^@/:]+)@)?(?P<host>[^:]+):(?P<path>(?:/.*|~(?:/.*)?))$")
+_WINDOWS_DRIVE_PATH_RE = re.compile(r"^[A-Za-z]:[\\/].*$")
+_WINDOWS_LEGACY_MAPPING_RE = re.compile(r"^(?P<src>[A-Za-z]:[\\/].*):(?P<dst>[A-Za-z]:[\\/].*)$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +60,9 @@ def parse_target_spec(spec: str) -> Result[TargetSpec, ParseError]:
     if spec.startswith("ssh://"):
         return _parse_ssh_url(spec)
 
+    if _WINDOWS_DRIVE_PATH_RE.fullmatch(spec):
+        return Ok(LocalTargetSpec(Path(spec).expanduser()))
+
     if matched := _SSH_TARGET_RE.fullmatch(spec):
         path = matched.group("path")
         return Ok(
@@ -97,7 +102,7 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[SyncMapping, bool], Pa
                         abs_dst_dir = dst_spec.path.resolve()
                         if abs_src_dir in abs_dst_dir.parents:
                             return Err(
-                                ParseError(f"src_dir({abs_src_dir}) is a subdirectory of dst_dir({abs_dst_dir}).")
+                                ParseError(f"dst_dir({abs_dst_dir}) is a subdirectory of src_dir({abs_src_dir}).")
                             )
 
                     return Ok((SyncMapping(source=src_spec.path, target=dst_spec), bidirectional))
@@ -128,6 +133,14 @@ def _split_sync_mapping(sync_mapping: str) -> Result[tuple[str, str, bool], Pars
     if "->" in sync_mapping:
         src_dir, dst_dir = sync_mapping.split("->", maxsplit=1)
         return _validate_split(sync_mapping, src_dir, dst_dir, bidirectional=False)
+
+    if matched := _WINDOWS_LEGACY_MAPPING_RE.fullmatch(sync_mapping):
+        return _validate_split(
+            sync_mapping,
+            matched.group("src"),
+            matched.group("dst"),
+            bidirectional=False,
+        )
 
     if sync_mapping.count(":") == 1:
         src_dir, dst_dir = sync_mapping.split(":", maxsplit=1)
