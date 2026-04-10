@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import time
 from pathlib import Path
@@ -8,10 +9,33 @@ from watchfiles import Change
 from watchfiles.filters import BaseFilter
 
 
-def match_pattern(path: Path, pattern: Path) -> bool:
-    if pattern.is_dir():
-        return pattern in [path, *path.parents]
-    return path.match(str(pattern))
+def match_pattern(path: Path, pattern: str) -> bool:
+    normalized_path = path.as_posix()
+    if Path(pattern).is_absolute():
+        return _match_candidate(normalized_path, pattern)
+
+    return any(_match_candidate(candidate, pattern) for candidate in iter_path_suffixes(path))
+
+
+def iter_path_suffixes(path: Path) -> list[str]:
+    parts = path.parts[1:] if path.is_absolute() else path.parts
+    return ["/".join(parts[index:]) for index in range(len(parts))]
+
+
+def _match_candidate(candidate: str, pattern: str) -> bool:
+    normalized_pattern = pattern.rstrip("/")
+    if _contains_glob(pattern):
+        if fnmatch.fnmatchcase(candidate, pattern):
+            return True
+        if pattern.endswith("/**"):
+            return _match_candidate(candidate, pattern.removesuffix("/**"))
+        return False
+
+    return candidate == normalized_pattern or candidate.startswith(f"{normalized_pattern}/")
+
+
+def _contains_glob(pattern: str) -> bool:
+    return any(token in pattern for token in "*?[]")
 
 
 class ExcludeFilter(BaseFilter):
@@ -23,11 +47,13 @@ class ExcludeFilter(BaseFilter):
         return all(not match_pattern(Path(path), pattern) for pattern in self.exclude_patterns)
 
     @staticmethod
-    def parse_cli_arg(cli_arg: str) -> list[Path]:
-        exclude_patterns: list[Path] = []
+    def parse_cli_arg(cli_arg: str) -> list[str]:
+        exclude_patterns: list[str] = []
         for arg in cli_arg.split(","):
-            path_patterns = Path(arg).absolute()
-            exclude_patterns.append(path_patterns)
+            stripped_arg = arg.strip()
+            if not stripped_arg:
+                continue
+            exclude_patterns.append(Path(stripped_arg).expanduser().as_posix())
         return exclude_patterns
 
 

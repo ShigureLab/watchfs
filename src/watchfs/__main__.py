@@ -2,20 +2,21 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import shutil
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiofiles.os import wrap
 from colored import Back, Fore
 from watchfiles import Change, awatch  # type: ignore
 
 from watchfs import __version__
 from watchfs.as_sync import as_sync
 from watchfs.colorful import Badge
-from watchfs.exceptions import ParseError
 from watchfs.filters import ChangeCacheFilter, ExcludeFilter, combine_filters
-from watchfs.rusty import Err, Ok, Result
+from watchfs.mappings import SshTargetSpec, SyncMapping, parse_sync_mapping
+from watchfs.rusty import Err, Ok
+from watchfs.targets import SyncTarget, create_target
 
 if TYPE_CHECKING:
     from watchfiles.filters import BaseFilter
@@ -29,93 +30,124 @@ CHANGE_TYPE_TO_BADGE = {
     Change.modified: BADGE_MOD,
 }
 
-copyfile = wrap(shutil.copyfile)
+
+async def handle_added(src_dir: Path, target: SyncTarget, changed: Path):
+    await handle_modified(src_dir, target, changed)
 
 
-async def handle_added(src_dir: Path, dst_dir: Path, changed: Path):
-    await handle_modified(src_dir, dst_dir, changed)
-
-
-async def handle_modified(src_dir: Path, dst_dir: Path, changed: Path):
+async def handle_modified(src_dir: Path, target: SyncTarget, changed: Path):
     changed_rel_to_src = changed.relative_to(src_dir)
-    dst = dst_dir / changed_rel_to_src
     if changed.is_dir():
         for child in changed.iterdir():
-            await handle_modified(src_dir, dst_dir, child)
+            await handle_modified(src_dir, target, child)
     elif changed.is_file():
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        await copyfile(changed, dst)
+        await target.write_file(changed_rel_to_src, changed)
 
 
-async def handle_removed(src_dir: Path, dst_dir: Path, changed: Path):
+async def handle_removed(src_dir: Path, target: SyncTarget, changed: Path):
     changed_rel_to_src = changed.relative_to(src_dir)
-    dst = dst_dir / changed_rel_to_src
-    if dst.is_dir():
-        for child in dst.iterdir():
-            child_rel_to_dst = child.relative_to(dst_dir)
-            await handle_removed(src_dir, dst_dir, src_dir / child_rel_to_dst)
-        dst.rmdir()
-    elif dst.is_file():
-        dst.unlink()
+    await target.remove_path(changed_rel_to_src)
 
 
-async def sync(src_dir: str, dst_dir: str, filter: BaseFilter, *, force_polling: bool = False):
-    src = Path(src_dir).absolute()
-    dst = Path(dst_dir).absolute()
-    async for changes in awatch(src, watch_filter=filter, force_polling=force_polling):
+@dataclass(frozen=True, slots=True)
+class SyncJob:
+    mapping: SyncMapping
+    target: SyncTarget
+    queue_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class SyncEvent:
+    job: SyncJob
+    change: Change
+    path: Path
+
+
+async def consume_target_queue(queue: asyncio.Queue[SyncEvent]) -> None:
+    while True:
+        event = await queue.get()
+        try:
+            try:
+                await apply_event(event)
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:
+                print(f"Failed to sync {event.path} to {event.job.target.description}: {err}", file=sys.stderr)
+        finally:
+            queue.task_done()
+
+
+async def apply_event(event: SyncEvent) -> None:
+    src_dir = event.job.mapping.source.resolve()
+    match event.change:
+        case Change.added:
+            await handle_added(src_dir, event.job.target, event.path)
+        case Change.modified:
+            await handle_modified(src_dir, event.job.target, event.path)
+        case Change.deleted:
+            await handle_removed(src_dir, event.job.target, event.path)
+
+
+async def watch_source(
+    source: Path,
+    jobs: list[SyncJob],
+    queues: dict[str, asyncio.Queue[SyncEvent]],
+    filter: BaseFilter,
+    *,
+    force_polling: bool = False,
+) -> None:
+    async for changes in awatch(source, watch_filter=filter, force_polling=force_polling):
         for change, path in changes:
             path = Path(path).absolute()
             print(f"{CHANGE_TYPE_TO_BADGE[change]} {path}")
-            match change:
-                case Change.added:
-                    await handle_added(src, dst, path)
-                case Change.modified:
-                    await handle_modified(src, dst, path)
-                case Change.deleted:
-                    await handle_removed(src, dst, path)
+            for job in jobs:
+                await queues[job.queue_key].put(SyncEvent(job=job, change=change, path=path))
 
 
-def parse_sync_mapping(sync_mapping: str) -> Result[tuple[str, str, bool], ParseError]:
-    splited_sync_mapping: list[str] = sync_mapping.split(":")
-    bidirectional: bool = False
-    if ":" in sync_mapping:
-        splited_sync_mapping = sync_mapping.split(":")
-    elif "<->" in sync_mapping:
-        splited_sync_mapping = sync_mapping.split("<->")
-        bidirectional = True
-    elif "->" in sync_mapping:
-        splited_sync_mapping = sync_mapping.split("->")
-    if len(splited_sync_mapping) != 2:
-        return Err(ParseError("Invalid sync mapping."))
-    src_dir, dst_dir = splited_sync_mapping
-
-    # check if src_dir is a subdirectory of dst_dir
-    abs_src_dir = Path(src_dir).resolve()
-    abs_dst_dir = Path(dst_dir).resolve()
-    if abs_src_dir in abs_dst_dir.parents:
-        return Err(ParseError(f"src_dir({abs_src_dir}) is a subdirectory of dst_dir({abs_dst_dir})."))
-
-    return Ok((src_dir, dst_dir, bidirectional))
+def build_queue_key(mapping: SyncMapping) -> str:
+    if isinstance(mapping.target, SshTargetSpec):
+        return f"ssh:{mapping.target.credential_key()}"
+    return f"local:{mapping.target.display()}"
 
 
 @as_sync
 async def main():
     parser = argparse.ArgumentParser(prog="watchfs", description="Watch and sync files.")
     parser.add_argument("-v", "--version", action="version", version=__version__)
-    parser.add_argument("sync_mapping", metavar="SRC_DIR:DST_DIR", type=str, nargs="+", help="Sync mapping file.")
+    parser.add_argument(
+        "sync_mapping",
+        metavar="SRC->DST",
+        type=str,
+        nargs="+",
+        help="Sync mapping file. Use SRC->DST for SSH destinations such as user@host:/path.",
+    )
     parser.add_argument("--exclude", type=str, help="Exclude directories or files, separated by comma.")
     parser.add_argument("-cc", "--enable-content-caching", action="store_true", help="Enable content caching.")
     parser.add_argument("--force-polling", action="store_true", help="Enable force polling.")
     args = parser.parse_args()
-    parsed_sync_mapping: list[tuple[str, str]] = []
+    parsed_sync_mapping: list[SyncMapping] = []
     for sync_src_with_dst in args.sync_mapping:
         match parse_sync_mapping(sync_src_with_dst):
-            case Ok((src_dir, dst_dir, bidirectional)):
-                parsed_sync_mapping.append((src_dir, dst_dir))
+            case Ok((mapping, bidirectional)):
+                parsed_sync_mapping.append(mapping)
                 if bidirectional:
-                    parsed_sync_mapping.append((dst_dir, src_dir))
+                    match parse_sync_mapping(f"{mapping.target.display()}->{mapping.source}"):
+                        case Ok((reverse_mapping, _)):
+                            parsed_sync_mapping.append(reverse_mapping)
+                        case Err(err):
+                            raise err
             case Err(err):
                 raise err
+
+    jobs = [
+        SyncJob(
+            mapping=mapping,
+            target=create_target(mapping.target),
+            queue_key=build_queue_key(mapping),
+        )
+        for mapping in parsed_sync_mapping
+    ]
+
     filters: list[BaseFilter] = []
     if args.exclude:
         filters.append(ExcludeFilter(args.exclude))
@@ -123,17 +155,39 @@ async def main():
         filters.append(ChangeCacheFilter())
 
     combined_filter = combine_filters(filters)
-    print(f"Starting watch {', '.join(f'{src_dst[0]} -> {src_dst[1]}' for src_dst in parsed_sync_mapping)}")
+    print(f"Starting watch {', '.join(mapping.display() for mapping in parsed_sync_mapping)}")
     print("Press Ctrl+C to exit.")
+    queues: dict[str, asyncio.Queue[SyncEvent]] = {job.queue_key: asyncio.Queue() for job in jobs}
+    source_jobs: dict[Path, list[SyncJob]] = {}
+    for job in jobs:
+        source_jobs.setdefault(job.mapping.source.resolve(), []).append(job)
+    worker_tasks: list[asyncio.Task[None]] = []
+    watcher_tasks: list[asyncio.Task[None]] = []
     try:
-        await asyncio.gather(
-            *[
-                sync(src_dir, dst_dir, combined_filter, force_polling=args.force_polling)
-                for src_dir, dst_dir in parsed_sync_mapping
-            ]
-        )
+        await asyncio.gather(*(job.target.start() for job in jobs))
+        worker_tasks = [asyncio.create_task(consume_target_queue(queue)) for queue in queues.values()]
+        watcher_tasks = [
+            asyncio.create_task(
+                watch_source(
+                    source,
+                    grouped_jobs,
+                    queues,
+                    combined_filter,
+                    force_polling=args.force_polling,
+                )
+            )
+            for source, grouped_jobs in source_jobs.items()
+        ]
+        await asyncio.gather(*worker_tasks, *watcher_tasks)
     except asyncio.exceptions.CancelledError:
         print("Bye!")
+    finally:
+        for task in watcher_tasks:
+            task.cancel()
+        for task in worker_tasks:
+            task.cancel()
+        await asyncio.gather(*watcher_tasks, *worker_tasks, return_exceptions=True)
+        await asyncio.gather(*(job.target.close() for job in jobs))
 
 
 if __name__ == "__main__":

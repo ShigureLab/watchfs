@@ -15,12 +15,28 @@ Watch Files and Sync them to another directory
 
 ## Installation
 
-```python
+```bash
 uv tool install watchfs
 ```
 
 ## Usage
 
-```python
+```bash
 watchfs src1:dst1 src2:dst2
 ```
+
+### SSH target
+
+Use `SRC->DST` when the destination is a remote SSH directory:
+
+```bash
+watchfs ./src->meow@192.168.66.1:/tmp/watchfs-demo
+```
+
+Notes:
+
+- Only local source to remote SSH destination is supported right now.
+- SSH currently relies on your existing OpenSSH login setup, such as key-based auth or an already configured SSH environment.
+- Bidirectional sync with an SSH target is not supported.
+- Events are serialized per destination machine and can upload to different destination machines in parallel.
+- Jump host / bastion support is planned and currently tracked as a TODO in the SSH backend.
