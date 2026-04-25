@@ -107,6 +107,8 @@ def parse_sync_mapping(sync_mapping: str) -> Result[tuple[SyncMapping, bool], Pa
 
                     return Ok((SyncMapping(source=src_spec.path, target=dst_spec), bidirectional))
 
+    raise AssertionError("unreachable")
+
 
 def _parse_ssh_url(spec: str) -> Result[SshTargetSpec, ParseError]:
     parsed = urlparse(spec)

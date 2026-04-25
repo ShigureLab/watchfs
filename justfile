@@ -11,7 +11,7 @@ fmt:
   uv run ruff format .
 
 lint:
-  uv run pyright src/watchfs tests
+  uv run ty check --error-on-warning src/watchfs tests
   uv run ruff check .
 
 fmt-docs:

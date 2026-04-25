@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from colored import Back, Fore
-from watchfiles import Change, awatch  # type: ignore
+from watchfiles import Change, awatch
 
 from watchfs import __version__
 from watchfs.as_sync import as_sync
