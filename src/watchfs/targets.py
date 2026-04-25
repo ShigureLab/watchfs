@@ -127,12 +127,19 @@ async def _run_command(
     *,
     stdin: IO[bytes] | int | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    return await asyncio.to_thread(
-        subprocess.run,
+    return await asyncio.to_thread(_run_command_sync, command, stdin=stdin)
+
+
+def _run_command_sync(
+    command: list[str],
+    *,
+    stdin: IO[bytes] | int | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
         command,
         stdin=stdin if stdin is not None else subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
+        text=False,
     )
 
 

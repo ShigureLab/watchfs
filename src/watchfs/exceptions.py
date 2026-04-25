@@ -32,10 +32,12 @@ class ParseError(WatchFsBaseException):
     code = ErrorCode.PARSE_ERROR
 
 
-def handleUncaughtException(exctype: type[Exception], exception: Exception, trace: TracebackType):
-    oldHook(exctype, exception, trace)
+def handle_uncaught_exception(
+    exctype: type[BaseException], exception: BaseException, trace: TracebackType | None
+) -> None:
+    old_hook(exctype, exception, trace)
     if isinstance(exception, WatchFsBaseException):
-        sys.exit(exception.code.value)
+        raise SystemExit(exception.code.value)
 
 
-sys.excepthook, oldHook = handleUncaughtException, sys.excepthook
+old_hook, sys.excepthook = sys.excepthook, handle_uncaught_exception
