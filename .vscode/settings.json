@@ -1,7 +1,5 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-  "python.analysis.inlayHints.functionReturnTypes": true,
-  "python.analysis.inlayHints.variableTypes": true,
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   }

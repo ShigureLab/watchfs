@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -33,17 +32,14 @@ class ParseError(WatchFsBaseException):
     code = ErrorCode.PARSE_ERROR
 
 
-type ExceptionHook = Callable[[type[BaseException], BaseException, TracebackType | None], object]
-
-oldHook: ExceptionHook = sys.excepthook
-
-
-def handle_uncaught_exception(
+def handleUncaughtException(
     exctype: type[BaseException], exception: BaseException, trace: TracebackType | None
-) -> None:
+) -> object:
     oldHook(exctype, exception, trace)
     if isinstance(exception, WatchFsBaseException):
         raise SystemExit(exception.code.value)
+    return None
 
 
-sys.excepthook = handle_uncaught_exception
+oldHook = sys.excepthook
+sys.excepthook = handleUncaughtException
