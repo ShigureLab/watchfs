@@ -34,11 +34,10 @@ class ParseError(WatchFsBaseException):
 
 def handleUncaughtException(
     exctype: type[BaseException], exception: BaseException, trace: TracebackType | None
-) -> object:
+) -> None:
     oldHook(exctype, exception, trace)
     if isinstance(exception, WatchFsBaseException):
         raise SystemExit(exception.code.value)
-    return None
 
 
 oldHook = sys.excepthook
