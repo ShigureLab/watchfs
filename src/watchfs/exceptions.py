@@ -40,4 +40,4 @@ def handle_uncaught_exception(
         raise SystemExit(exception.code.value)
 
 
-sys.excepthook, old_hook = handle_uncaught_exception, sys.excepthook
+old_hook, sys.excepthook = sys.excepthook, handle_uncaught_exception
