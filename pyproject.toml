@@ -37,7 +37,7 @@ watchfs = "watchfs.__main__:main"
 dev = [
   "ty>=0.0.35",
   "ruff>=0.15.12",
-  "pytest>=8.4.2",
+  "pytest>=9.0.3",
   "pytest-rerunfailures>=16.1",
   "tomli>=2.4.1",
 ]
