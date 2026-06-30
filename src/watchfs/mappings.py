@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import cast
 from urllib.parse import urlparse
 
 from watchfs.exceptions import ParseError
@@ -77,37 +78,35 @@ def parse_target_spec(spec: str) -> Result[TargetSpec, ParseError]:
 
 
 def parse_sync_mapping(sync_mapping: str) -> Result[tuple[SyncMapping, bool], ParseError]:
-    match _split_sync_mapping(sync_mapping):
-        case Err(err):
-            return Err(err)
-        case Ok((src_dir, dst_dir, bidirectional)):
-            match parse_target_spec(src_dir):
-                case Err(err):
-                    return Err(err)
-                case Ok(src_spec):
-                    if isinstance(src_spec, SshTargetSpec):
-                        return Err(ParseError("Remote source is not supported yet. Source must be a local path."))
+    split_result = _split_sync_mapping(sync_mapping)
+    if isinstance(split_result, Err):
+        return cast("Err[ParseError]", split_result)
 
-            match parse_target_spec(dst_dir):
-                case Err(err):
-                    return Err(err)
-                case Ok(dst_spec):
-                    if isinstance(dst_spec, SshTargetSpec) and bidirectional:
-                        return Err(
-                            ParseError("Bidirectional sync is not supported when the destination is an SSH target.")
-                        )
+    src_dir, dst_dir, bidirectional = cast("Ok[tuple[str, str, bool]]", split_result).ok()
 
-                    if isinstance(dst_spec, LocalTargetSpec):
-                        abs_src_dir = src_spec.path.resolve()
-                        abs_dst_dir = dst_spec.path.resolve()
-                        if abs_src_dir in abs_dst_dir.parents:
-                            return Err(
-                                ParseError(f"dst_dir({abs_dst_dir}) is a subdirectory of src_dir({abs_src_dir}).")
-                            )
+    src_result = parse_target_spec(src_dir)
+    if isinstance(src_result, Err):
+        return cast("Err[ParseError]", src_result)
 
-                    return Ok((SyncMapping(source=src_spec.path, target=dst_spec), bidirectional))
+    src_spec = cast("Ok[TargetSpec]", src_result).ok()
+    if isinstance(src_spec, SshTargetSpec):
+        return Err(ParseError("Remote source is not supported yet. Source must be a local path."))
 
-    raise AssertionError("unreachable")
+    dst_result = parse_target_spec(dst_dir)
+    if isinstance(dst_result, Err):
+        return cast("Err[ParseError]", dst_result)
+
+    dst_spec = cast("Ok[TargetSpec]", dst_result).ok()
+    if isinstance(dst_spec, SshTargetSpec) and bidirectional:
+        return Err(ParseError("Bidirectional sync is not supported when the destination is an SSH target."))
+
+    if isinstance(dst_spec, LocalTargetSpec):
+        abs_src_dir = src_spec.path.resolve()
+        abs_dst_dir = dst_spec.path.resolve()
+        if abs_src_dir in abs_dst_dir.parents:
+            return Err(ParseError(f"dst_dir({abs_dst_dir}) is a subdirectory of src_dir({abs_src_dir})."))
+
+    return Ok((SyncMapping(source=src_spec.path, target=dst_spec), bidirectional))
 
 
 def _parse_ssh_url(spec: str) -> Result[SshTargetSpec, ParseError]:

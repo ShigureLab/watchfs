@@ -5,7 +5,7 @@ import asyncio
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from colored import Back, Fore
 from watchfiles import Change, awatch
@@ -127,17 +127,19 @@ async def main():
     args = parser.parse_args()
     parsed_sync_mapping: list[SyncMapping] = []
     for sync_src_with_dst in args.sync_mapping:
-        match parse_sync_mapping(sync_src_with_dst):
-            case Ok((mapping, bidirectional)):
-                parsed_sync_mapping.append(mapping)
-                if bidirectional:
-                    match parse_sync_mapping(f"{mapping.target.display()}->{mapping.source}"):
-                        case Ok((reverse_mapping, _)):
-                            parsed_sync_mapping.append(reverse_mapping)
-                        case Err(err):
-                            raise err
-            case Err(err):
-                raise err
+        parsed_mapping = parse_sync_mapping(sync_src_with_dst)
+        if isinstance(parsed_mapping, Err):
+            raise cast("Err[Exception]", parsed_mapping).err()
+
+        mapping, bidirectional = cast("Ok[tuple[SyncMapping, bool]]", parsed_mapping).ok()
+        parsed_sync_mapping.append(mapping)
+        if bidirectional:
+            reverse_mapping_result = parse_sync_mapping(f"{mapping.target.display()}->{mapping.source}")
+            if isinstance(reverse_mapping_result, Err):
+                raise cast("Err[Exception]", reverse_mapping_result).err()
+
+            reverse_mapping, _ = cast("Ok[tuple[SyncMapping, bool]]", reverse_mapping_result).ok()
+            parsed_sync_mapping.append(reverse_mapping)
 
     jobs = [
         SyncJob(
