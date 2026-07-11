@@ -35,10 +35,10 @@ watchfs = "watchfs.__main__:main"
 
 [dependency-groups]
 dev = [
-  "ty>=0.0.54,!=0.0.55",
-  "ruff>=0.15.20",
+  "ty>=0.0.54,<0.0.55",
+  "ruff>=0.15.21",
   "pytest>=9.1.1",
-  "pytest-rerunfailures>=16.3",
+  "pytest-rerunfailures>=16.4",
   "tomli>=2.4.1",
 ]
 
