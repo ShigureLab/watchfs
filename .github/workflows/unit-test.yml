@@ -67,3 +67,11 @@ jobs:
       - name: unit test
         run: |
           just ci-test
+
+      - name: Test installed wheel
+        run: |
+          uv build
+          uv pip install --python .venv/bin/python --no-deps --reinstall dist/*.whl
+          uv run --no-sync watchfs --help
+          uv run --no-sync watchfs --version
+          uv run --no-sync python -m pytest

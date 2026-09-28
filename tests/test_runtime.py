@@ -36,8 +36,11 @@ def test_native_watch_and_local_sync(tmp_path: Path):
         async with aclosing(
             awatch(source, yield_on_timeout=True, rust_timeout=100, debounce=10, step=10, force_polling=False)
         ) as changes:
-            # An empty batch confirms the native watcher is ready before creating a file.
-            assert await anext(changes) == set()
+            # Drain setup events (e.g. macOS can report the new source directory).
+            # An empty batch confirms the watcher is ready before creating a file.
+            async for batch in changes:
+                if not batch:
+                    break
             changed.write_text("Python runtime smoke test")
             async for batch in changes:
                 if (Change.added, str(changed)) in batch:
