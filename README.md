@@ -19,6 +19,10 @@ Watch Files and Sync them to another directory
 uv tool install watchfs
 ```
 
+Python 3.12+ is required. Linux CI also tests Python 3.15 (including release
+candidates) and free-threaded Python 3.15t. Standard CPython 3.15 can use watchfiles' ABI3
+wheels; 3.15t currently builds watchfiles from source and requires a Rust toolchain.
+
 ## Usage
 
 ```bash

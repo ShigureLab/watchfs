@@ -10,9 +10,12 @@ on:
 jobs:
   unit-test:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+      UV_LOCKED: 'true'
     strategy:
       matrix:
-        python-version: ['3.12', '3.13', '3.14']
+        python-version: ['3.12', '3.13', '3.14', '3.15', '3.15t']
         architecture: ['x64']
     name: unittest - Python ${{ matrix.python-version }} on ${{ matrix.architecture }}
     steps:
@@ -29,6 +32,11 @@ jobs:
           architecture: ${{ matrix.architecture }}
           allow-prereleases: true
 
+      # watchfiles currently provides abi3 wheels for 3.15, but no 3.15t wheels.
+      - name: Install Rust for the free-threaded watchfiles source build
+        if: matrix.python-version == '3.15t'
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install just
         uses: extractions/setup-just@v4
         env:
@@ -37,6 +45,24 @@ jobs:
       - name: Install dependencies
         run: |
           just ci-install
+
+      - name: Verify interpreter and native dependency
+        run: |
+          uv run python - <<'PY'
+          import os
+          import sys
+          import sysconfig
+
+          import watchfs.__main__
+
+          expected = os.environ['UV_PYTHON']
+          assert f'{sys.version_info.major}.{sys.version_info.minor}' == expected.removesuffix('t')
+          free_threaded = expected.endswith('t')
+          assert bool(sysconfig.get_config_var('Py_GIL_DISABLED')) == free_threaded
+          if free_threaded:
+              assert not sys._is_gil_enabled(), 'A runtime dependency re-enabled the GIL'
+          print(sys.version)
+          PY
 
       - name: unit test
         run: |
