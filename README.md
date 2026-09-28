@@ -19,9 +19,17 @@ Watch Files and Sync them to another directory
 uv tool install watchfs
 ```
 
-Python 3.12+ is required. Linux CI also tests Python 3.15 (including release
-candidates) and free-threaded Python 3.15t. Standard CPython 3.15 can use watchfiles' ABI3
-wheels; 3.15t currently builds watchfiles from source and requires a Rust toolchain.
+Python 3.12+ is required. CI tests Python 3.15 (including release candidates) and
+free-threaded Python 3.15t on Linux x64 and macOS 26 arm64. Standard CPython 3.15 can
+use watchfiles' ABI3 wheels; 3.15t currently builds watchfiles from source and
+requires a Rust toolchain.
+
+Known source-build limitation: on macOS 27 with Xcode 27, locally built watchfiles
+can fail to import with `mis-aligned LINKEDIT string pool`. This also reproduces
+on Python 3.14 and 3.14t; published wheels work. macOS 3.15t runtime validation
+currently covers the macOS 26 CI runner, not this macOS 27 toolchain. See
+[the compatibility investigation](https://github.com/ShigureLab/watchfs/pull/104)
+for details.
 
 ## Usage
 
