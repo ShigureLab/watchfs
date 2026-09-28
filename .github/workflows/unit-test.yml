@@ -9,15 +9,24 @@ on:
 
 jobs:
   unit-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     env:
       UV_PYTHON: ${{ matrix.python-version }}
       UV_LOCKED: 'true'
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ['3.12', '3.13', '3.14', '3.15', '3.15t']
         architecture: ['x64']
-    name: unittest - Python ${{ matrix.python-version }} on ${{ matrix.architecture }}
+        include:
+          - os: macos-latest
+            python-version: '3.15'
+            architecture: 'arm64'
+          - os: macos-latest
+            python-version: '3.15t'
+            architecture: 'arm64'
+    name: unittest - Python ${{ matrix.python-version }} on ${{ matrix.os }} ${{ matrix.architecture }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
